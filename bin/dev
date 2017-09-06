@@ -1,0 +1,22 @@
+#!/bin/sh
+
+SESSION_NAME="instavr"
+
+cd ~/Documents/vr/instavr
+
+tmux has-session -t ${SESSION_NAME}
+
+if [ $? != 0 ]
+then
+  # create session
+  tmux new-session -s ${SESSION_NAME} -n DEV -d
+
+  # top pane is nodemon
+  tmux select-pane -t 0
+  tmux send-keys 'npm start' C-m
+
+  # split window into panes
+  tmux split-window -v
+fi
+tmux attach -t ${SESSION_NAME}
+
