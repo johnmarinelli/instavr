@@ -7,7 +7,6 @@ module.exports = function CursorListener(AFRAME, componentName) {
     },
     
     init: function () {
-      let COLORS = ['red', 'green', 'blue'];
       let self = this;
 
       this.el.addEventListener('animationbegin', (e) => {
