@@ -11,10 +11,10 @@ export default function setInstagramWindows(posts) {
   let windows = [];
   let videos = [];
   let totalMediaIndex = 0;
-  let rows = 5, cols = 4;
+  const rows = 5, cols = 4;
 
   // mutates `props`
-  let createVideoAsset = (props, post) => {
+  const createVideoAsset = (props, post) => {
     props.primitive = 'a-image';
     props.videoAssetId = `video_${videos.length}`;
     props.src = post.images.thumbnail.url;
@@ -22,32 +22,46 @@ export default function setInstagramWindows(posts) {
 
     // create video asset
     // playsinline attribute is for iOs
-    let videoAsset = (
+    const videoAsset = (
       <video id={props.videoAssetId} src={props.videoSrc} playsInline muted key={videos.length}></video>
     );
     return videoAsset;
   };
 
-  // mutates `props`
-  let setImageEntity = (props, post) => {
-    props.primitive = 'a-image';
-    props.src = post.images.thumbnail.url;
-    props.onClickSrc = post.images.standard_resolution.url;
+  const setEntity = (post, props) => {
+
+    // mutates `props`
+    const setImageEntity = (props, post) => {
+      props.primitive = 'a-image';
+      props.src = post.images.thumbnail.url;
+      props.onClickSrc = post.images.standard_resolution.url;
+    };
+
+    // mutates `props`
+    const setVideoEntity = (props, post) => {
+      const videoAsset = createVideoAsset(props, post);
+      videos.push(videoAsset);
+    };
+
+    const propsSetters = {
+      video: setVideoEntity,
+      image: setImageEntity
+    };
+
+    if (['video', 'image'].indexOf(post.type) > -1) {
+      propsSetters[post.type](props, post);
+    }
   };
 
-  // mutates `props`
-  let setVideoEntity = (props, post) => {
-    let videoAsset = createVideoAsset(props, post);
-    videos.push(videoAsset);
-  };
+  const createPanel = (post, props, cb) => {
+    setEntity(post, props);
 
-  let createPanel = (props, cb) => {
     let animateTo = Object.assign({}, props.scale);
     animateTo.x += 1.5;
     animateTo.y += 1.5;
     animateTo.z += 1.5;
 
-    let animationComponentTo = {
+    const animationComponentTo = {
       property: 'scale',
       from: props.scale,
       to: animateTo,
@@ -58,11 +72,11 @@ export default function setInstagramWindows(posts) {
     animationComponentFrom.startEvents = 'cursor-hover-out';
     animationComponentFrom.dir = 'reverse';
 
-    let cursorListenerComponent = {
+    const cursorListenerComponent = {
       'hi-res': props.onClickSrc
     }
 
-    let igWindow = (
+    const igWindow = (
       <Entity 
         primitive={props.primitive} 
         src={props.src} 
@@ -79,9 +93,9 @@ export default function setInstagramWindows(posts) {
     return igWindow;
   };
 
-  let createCarousel = (post, props, cb) => {
+  const createCarousel = (post, props, cb) => {
     let mediaPanels = [];
-    let parentKey = totalMediaIndex++;
+    const parentKey = totalMediaIndex++;
 
     // create parent Entity that will hold carousel items
     // see https://medium.com/immersion-for-the-win/relative-positioning-in-a-frame-d839fc0e3249
@@ -92,19 +106,13 @@ export default function setInstagramWindows(posts) {
       childProps.position.x = 0.0;
       childProps.position.y = 0.0;
       childProps.position.z = -0.2 * carouselIndex;
-      
-      if (media.images) {
-        setImageEntity(childProps, media);
-      }
-      else if (media.videos) {
-        setVideoEntity(childProps, media);
-      }
-      let panel = createPanel(childProps, (panel) => {
+
+      const panel = createPanel(media, childProps, (panel) => {
         mediaPanels.push(panel);
       });
     });
 
-    let carousel = (
+    const carousel = (
       <Entity 
         position={props.position}
         key={parentKey}
@@ -119,35 +127,27 @@ export default function setInstagramWindows(posts) {
   };
   
   posts.forEach((post, index) => {
-    let type = post.type;
+    const type = post.type;
     let props = {primitive: '', src: '', position: null, scale: {x: 1.9, y:1,z:1}};
-    let col = index % cols;
-    let row = index % rows;
+    const col = index % cols;
+    const row = index % rows;
 
-    let seedPosition = { x: (2.5 * col) - 5.0, y: row + 1, z: -2.5 };
+    const seedPosition = { x: (2.5 * col) - 5.0, y: row + 1, z: -2.5 };
     props.position = seedPosition;
 
-    if ('video' === type || 'image' === type) {
-      switch (type) {
-        case 'video':
-          setVideoEntity(props, post);
-          break;
-        case 'image':
-          setImageEntity(props, post);
-          break;
-        default: 
-          break;
-      }
+    const fns = {
+      video: createPanel,
+      image: createPanel,
+      carousel: createCarousel
+    };
 
-      createPanel(props, (panel) => {
-        windows.push(panel);
-      });
-    }
-    else if ('carousel' === type) {
-      createCarousel(post, props, (carousel) => {
-        windows.push(carousel);
-      });
-    }
+    const addToWindows = (wdw) => {
+      windows.push(wdw);
+    };
+
+    const fn = fns[type];
+    fn(post, props, addToWindows);
+
   })
 
   return {
